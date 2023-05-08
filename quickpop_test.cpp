@@ -2,9 +2,9 @@
 #include "quickpop.hpp"
 
 
-int intcompfunc(const int& lhs, const int&rhs)
+int intcompfunc(const int lhs, const int rhs)
 {
-    return lhs > rhs;
+    return lhs - rhs;
 }
 
 void TestNativeType()

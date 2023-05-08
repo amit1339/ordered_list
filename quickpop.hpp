@@ -10,30 +10,29 @@ public:
     T Pop();
 
 private:
-    struct node
+    struct Node
     {
-        struct node *next;
+        Node *next;
         T data;
     };
 
-    struct node* NewNode(T val)
+    Node* NewNode(T val)
     {
-        struct node* node = new struct node;
+        Node* node = new Node;
         node->data = val;
         node->next = nullptr;
         return node;
     }
 
-    bool IsEmpty();
     int (*m_compfunc)(const T lhs, const T rhs);
-    struct node* m_head;
+    Node* m_head;
     std::counting_semaphore<1> m_sem;
     std::mutex m_mutex;
 };
 
 template <class T>
-QuickPopDataStructure<T>::QuickPopDataStructure(int (*compfunc)(const T lhs, const T rhs)): m_compfunc(compfunc),
-m_sem(0)
+QuickPopDataStructure<T>::QuickPopDataStructure(int (*compfunc)(const T lhs, const T rhs)): m_compfunc(compfunc)
+,m_head(nullptr) ,m_sem(0)
 {
 }
 
@@ -41,25 +40,14 @@ template <class T>
 void QuickPopDataStructure<T>::Push(T val)
 {
     std::scoped_lock<std::mutex> lock(m_mutex);
-    if (IsEmpty())
+    Node** ppNode = &m_head;
+    while (*ppNode != nullptr && m_compfunc(val, (*ppNode)->data) <= 0)
     {
-        m_head = NewNode(val);
+        ppNode = &((*ppNode)->next);
     }
-    
-    else
-    {
-        struct node* node = m_head;
-        while (node != nullptr)
-        {
-            if (0 > m_compfunc(node->data,val))
-            {
-                struct node* temp = NewNode(val);
-                temp->next = node->next;
-                node->next = temp;
-            }
-            node = node->next;
-        }
-    }
+    Node* newNode = NewNode(val);
+    newNode->next = *ppNode;
+    *ppNode = newNode;
     m_sem.release();
 }
 
@@ -68,18 +56,14 @@ T QuickPopDataStructure<T>::Pop()
 {
     m_sem.acquire();
     std::scoped_lock<std::mutex> lock(m_mutex);
-    T& val = m_head->data;
-    struct node* temp = m_head->next;
+    T val = m_head->data;
+    Node* temp = m_head->next;
     delete m_head;
     m_head = temp;
     return val;
 }
 
-template <class T>
-bool QuickPopDataStructure<T>::IsEmpty()
-{
-    return m_head == nullptr;
-}
+
 
 
 

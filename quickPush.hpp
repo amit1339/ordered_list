@@ -11,23 +11,23 @@ public:
     T Pop();
 
 private:
-    struct node
+    struct Node
     {
-        struct node *next;
+        Node* next;
         T data;
     };
 
-    struct node* NewNode(T val)
+    struct Node* NewNode(T val)
     {
-        struct node* node = new struct node;
+        Node* node = new struct Node;
         node->data = val;
         node->next = nullptr;
         return node;
     }
 
-    bool IsEmpty();
+
     int (*m_compfunc)(const T lhs, const T rhs);
-    struct node* m_head;
+    Node* m_head;
     std::counting_semaphore<1> m_sem;
     std::mutex m_mutex;
 };
@@ -41,18 +41,10 @@ template <class T>
 void QuickPushDataStructure<T>::Push(T val)
 {
     std::scoped_lock<std::mutex> lock(m_mutex);
-    struct node* node = NewNode(val);
-
-    if (IsEmpty())
-    {
-        m_head = node;
-        m_head->next = nullptr;
-    }
-    else
-    {
-        node->next = m_head;
-        m_head = node;
-    }
+    Node* node = NewNode(val);
+    
+    node->next = m_head;
+    m_head = node;
 
     m_sem.release();
 }
@@ -62,34 +54,34 @@ T QuickPushDataStructure<T>::Pop()
 {
     m_sem.acquire();
     std::scoped_lock<std::mutex> lock(m_mutex);
-    struct node* node = m_head->next;
-    struct node* temp = m_head;
-    while (node != nullptr)
+    Node* node = m_head;
+    Node* prev = m_head;
+    Node* max = m_head;
+    while (node->next != nullptr)
     {
-        std::cout << node->data << " " << temp->data << std::endl;
-        if (0 < m_compfunc(node->data, temp->data))
+        if (0 < m_compfunc(node->next->data, max->data))
         {
-            temp = node;
+            max = node->next;
+            prev = node;
         }
         node = node->next;
     }
 
-    T val = temp->data;
-    if (nullptr == temp->next)
+    T val = max->data;
+
+    if (nullptr == max->next)
     {
-        delete node;
+        delete max;
+        prev->next = nullptr;
+        return val;
     }
-    
-    node = temp->next;
-    temp->data = node->data;
-    temp->next = node->next;
+
+    node = max->next;
+
+    max->data = node->data;
+    max->next = node->next;
     delete node;
 
     return val;
 }
 
-template <class T>
-bool QuickPushDataStructure<T>::IsEmpty()
-{
-    return m_head == nullptr;
-}
