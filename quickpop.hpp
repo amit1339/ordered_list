@@ -63,7 +63,3 @@ T QuickPopDataStructure<T>::Pop()
     return val;
 }
 
-
-
-
-
